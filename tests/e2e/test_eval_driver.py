@@ -51,6 +51,32 @@ def test_a_frozen_suite_loads(tmp_path):
     assert tasks[0].prompt.startswith("Write answer.txt")
 
 
+def test_a_relative_suite_path_reaches_the_grader_as_an_absolute_one(tmp_path, monkeypatch):
+    make_suite(tmp_path / "s")
+    monkeypatch.chdir(tmp_path)
+    task = S.load_suite(Path("s"))[0]
+    argv = G.grader_argv(task, tmp_path / "w", "img")
+    mounts = [a.split(":")[0] for a in argv if a.endswith((":/grade:ro", ":/grader:ro"))]
+    assert mounts and all(Path(m).is_absolute() for m in mounts)
+
+
+def test_the_check_gives_the_same_result_for_a_relative_and_an_absolute_path(tmp_path, monkeypatch):
+    suite = make_suite(tmp_path / "s")
+    monkeypatch.chdir(tmp_path)
+    seen = []
+
+    def fake_docker(argv, **kw):
+        seen.append(next(a for a in argv if a.endswith(":/grade:ro")))
+        return FakeDocker()(argv, **kw)
+
+    monkeypatch.setattr(driver, "check_controls",
+                        lambda task, image: G.check_controls(task, image, run=fake_docker))
+    assert driver.main(["check", "s", "--image", "img"]) == 0
+    assert driver.main(["check", str(suite), "--image", "img"]) == 0
+    assert len(seen) == 4 and len(set(seen)) == 1
+    assert Path(seen[0].split(":")[0]).is_absolute()
+
+
 @pytest.mark.parametrize("tamper, want", [
     (lambda t: (t / "prompt.md").write_text("changed\n"), "changed since the freeze: prompt.md"),
     (lambda t: (t / "seed" / "extra.py").write_text("x\n"), "added after the freeze: seed/extra.py"),

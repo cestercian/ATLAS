@@ -44,7 +44,11 @@ def sha256_file(path: Path) -> str:
 
 
 def load_suite(root: Path) -> list[Task]:
-    """Every task in the suite, after each file is checked against suite.json."""
+    """Every task in the suite, after each file is checked against suite.json.
+
+    The root is made absolute here: the grader mounts paths under it with
+    `docker run -v`, and docker reads a relative host path as a volume name."""
+    root = Path(root).resolve()
     manifest = _read_json(root / "suite.json")
     tasks = [_load_task(root / "tasks" / entry["id"], entry)
              for entry in manifest.get("tasks", [])]
