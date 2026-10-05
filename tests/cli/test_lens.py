@@ -17,7 +17,7 @@ from pathlib import Path
 import pytest
 
 from atlas import publishing
-from atlas.commands import lens
+from atlas.commands import lens, lens_card
 
 
 # ---------------------------------------------------------------------------
@@ -943,7 +943,7 @@ def test_model_card_provenance_names_the_loss_the_bundle_was_trained_with(tmp_pa
     built.mkdir()
     (built / "provenance.json").write_text(json.dumps(
         {"hyperparameters": {"epochs": 100, "lr": 1e-3, "margin": 5.0}}))
-    text = lens._model_card_provenance(str(built), "test-model", 4096)
+    text = lens_card.model_card_provenance(str(built), "test-model", 4096)
     assert "atlas lens build" in text
     assert "Contrastive ranking loss" in text
     assert "MSE" not in text
@@ -951,7 +951,7 @@ def test_model_card_provenance_names_the_loss_the_bundle_was_trained_with(tmp_pa
     legacy = tmp_path / "legacy"
     legacy.mkdir()
     for d in (legacy, tmp_path / "missing"):
-        text = lens._model_card_provenance(str(d), "test-model", 4096)
+        text = lens_card.model_card_provenance(str(d), "test-model", 4096)
         assert "class-weighted" in text and "MSE" in text
         assert "Trained locally via `atlas lens build`" not in text
 
